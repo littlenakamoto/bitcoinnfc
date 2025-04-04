@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Bitcoin Seed Vault (NFC Optimized)</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <script src="https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js"></script>
+  <style>
+    :root {
+      color-scheme: light dark;
+    }
+
+    body {
+      font-family: system-ui, sans-serif;
+      background: #f9fafb;
+      color: #111;
+      padding: 2rem;
+      margin: auto;
+      max-width: 800px;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      body {
+        background: #0f172a;
+        color: #e2e8f0;
+      }
+
+      textarea, input, .output {
+        background: #1e293b;
+        color: #e2e8f0;
+      }
+    }
+
+    h1 {
+      font-size: 2rem;
+      font-weight: bold;
+      margin-bottom: 0.5rem;
+    }
+
+    p.description {
+      font-size: 1rem;
+      color: #64748b;
+      margin-top: -0.5rem;
+      margin-bottom: 2rem;
+    }
+
+    textarea, input {
+      width: 100%;
+      padding: 0.75rem;
+      font-size: 1rem;
+      border-radius: 0.5rem;
+      border: 1px solid #cbd5e1;
+      margin-top: 0.5rem;
+      margin-bottom: 1rem;
+      box-sizing: border-box;
+    }
+
+    button {
+      background: #2563eb;
+      color: white;
+      border: none;
+      padding: 0.6rem 1rem;
+      font-size: 1rem;
+      border-radius: 0.5rem;
+      cursor: pointer;
+      margin-top: 0.5rem;
+      margin-right: 0.5rem;
+    }
+
+    button:hover {
+      background: #1d4ed8;
+    }
+
+    .section {
+      margin-top: 2rem;
+    }
+
+    .output {
+      margin-top: 1rem;
+      background: #f1f5f9;
+      color: #111;
+      padding: 1rem;
+      border-radius: 0.5rem;
+      white-space: pre-wrap;
+      word-wrap: break-word;
+      position: relative;
+      border: 1px solid #cbd5e1;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      .output {
+        background: #1e293b;
+        color: #e2e8f0;
+        border: 1px solid #334155;
+      }
+    }
+
+    .copy-btn {
+      position: absolute;
+      top: 0.5rem;
+      right: 0.5rem;
+      background: #e2e8f0;
+      color: #1e293b;
+      font-size: 0.8rem;
+      padding: 0.25rem 0.5rem;
+      border-radius: 0.25rem;
+    }
+
+    .copy-btn:hover {
+      background: #cbd5e1;
+    }
+
+    canvas {
+      margin-top: 1rem;
+      display: none;
+    }
+  </style>
+</head>
+<body>
+  <h1>🔐 Bitcoin Seed Vault (NFC Optimized)</h1>
+  <p class="description">
+    Securely encrypt your Bitcoin seed phrase using AES-256 encryption and store it in a compact format optimized for NFC tags.  
+    <br>
+    Designed for cold storage, air-gapped workflows, and mobile NFC devices. Fast, private, and fully offline — your keys never leave this page.
+  </p>
+
+  <div class="section">
+    <h2>Encrypt Seed</h2>
+    <label>Seed Phrase:</label>
+    <textarea id="seed" rows="3" placeholder="e.g. abandon abandon abandon ..."></textarea>
+
+    <label>Password:</label>
+    <input type="password" id="encryptPassword" placeholder="Strong password" />
+
+    <button onclick="encryptSeed()">Encrypt</button>
+
+    <div id="encryptedOutputContainer" style="display:none;">
+      <div class="output">
+        <button class="copy-btn" onclick="copyEncrypted()">Copy</button>
+        <pre id="encryptedOutput" style="white-space:pre-wrap;"></pre>
+      </div>
+      <div style="margin-top: 1rem;">
+        <button onclick="generateQRCode()">📸 Show QR</button>
+        <canvas id="qrCanvas"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>Decrypt Seed</h2>
+    <label>Encrypted String:</label>
+    <textarea id="encryptedJson" rows="4" placeholder="Paste compact NFC string here..."></textarea>
+    <button onclick="pasteEncrypted()">Paste</button>
+
+    <label>Password:</label>
+    <input type="password" id="decryptPassword" placeholder="Password used to encrypt" />
+
+    <button onclick="decryptSeed()">Decrypt</button>
+
+    <div class="output" id="decryptedOutput"></div>
+  </div>
+
+  <script>
+    async function getPasswordKey(password) {
+      const hash = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(password));
+      return crypto.subtle.importKey("raw", hash, "PBKDF2", false, ["deriveKey"]);
+    }
+
+    function b64encode(arr) {
+      return btoa(String.fromCharCode(...arr));
+    }
+
+    function b64decode(str) {
+      return new Uint8Array([...atob(str)].map(c => c.charCodeAt(0)));
+    }
+
+    async function encryptSeed() {
+      const seed = document.getElementById('seed').value.trim();
+      const password = document.getElementById('encryptPassword').value;
+
+      if (!seed || !password) return alert("Seed and password are required.");
+
+      const salt = crypto.getRandomValues(new Uint8Array(16));
+      const iv = crypto.getRandomValues(new Uint8Array(12));
+      const iterations = 300000;
+
+      const keyMaterial = await getPasswordKey(password);
+      const key = await crypto.subtle.deriveKey(
+        { name: "PBKDF2", salt, iterations, hash: "SHA-256" },
+        keyMaterial,
+        { name: "AES-GCM", length: 256 },
+        false,
+        ["encrypt"]
+      );
+
+      const encrypted = await crypto.subtle.encrypt(
+        { name: "AES-GCM", iv },
+        key,
+        new TextEncoder().encode(seed)
+      );
+
+      const compact = [
+        iterations,
+        b64encode(salt),
+        b64encode(iv),
+        b64encode(new Uint8Array(encrypted))
+      ].join(':');
+
+      document.getElementById('encryptedOutput').textContent = compact;
+      document.getElementById('encryptedOutputContainer').style.display = 'block';
+    }
+
+    async function decryptSeed() {
+      const input = document.getElementById('encryptedJson').value.trim();
+      const password = document.getElementById('decryptPassword').value;
+
+      if (!input || !password) return alert("Encrypted string and password required.");
+
+      try {
+        const [iterationsStr, saltB64, ivB64, ctB64] = input.split(':');
+        const iterations = parseInt(iterationsStr, 10);
+
+        const salt = b64decode(saltB64);
+        const iv = b64decode(ivB64);
+        const ciphertext = b64decode(ctB64);
+
+        const keyMaterial = await getPasswordKey(password);
+        const key = await crypto.subtle.deriveKey(
+          { name: "PBKDF2", salt, iterations, hash: "SHA-256" },
+          keyMaterial,
+          { name: "AES-GCM", length: 256 },
+          false,
+          ["decrypt"]
+        );
+
+        const decrypted = await crypto.subtle.decrypt(
+          { name: "AES-GCM", iv },
+          key,
+          ciphertext
+        );
+
+        const seed = new TextDecoder().decode(decrypted);
+        document.getElementById('decryptedOutput').textContent = `✅ Decrypted Seed:\n${seed}`;
+      } catch (e) {
+        document.getElementById('decryptedOutput').textContent = "❌ Decryption failed. Invalid password or data.";
+      }
+    }
+
+    function copyEncrypted() {
+      const text = document.getElementById('encryptedOutput').textContent;
+      if (navigator.clipboard && window.isSecureContext) {
+        navigator.clipboard.writeText(text).then(() => alert("Copied to clipboard!"))
+          .catch(err => alert("Clipboard error: " + err.message));
+      } else {
+        const textarea = document.createElement('textarea');
+        textarea.value = text;
+        document.body.appendChild(textarea);
+        textarea.select();
+        try {
+          document.execCommand('copy');
+          alert('Copied to clipboard!');
+        } catch (err) {
+          alert('Copy failed: ' + err);
+        }
+        document.body.removeChild(textarea);
+      }
+    }
+
+    function pasteEncrypted() {
+      if (navigator.clipboard && window.isSecureContext) {
+        navigator.clipboard.readText()
+          .then(text => {
+            document.getElementById('encryptedJson').value = text;
+          })
+          .catch(err => alert("Paste failed: " + err.message));
+      } else {
+        alert("Paste not supported. Use Ctrl+V manually.");
+      }
+    }
+
+    function generateQRCode() {
+      const encrypted = document.getElementById('encryptedOutput').textContent;
+      const canvas = document.getElementById('qrCanvas');
+      if (!encrypted) {
+        alert("Nothing to generate. Please encrypt a seed first.");
+        return;
+      }
+      QRCode.toCanvas(canvas, encrypted, {
+        errorCorrectionLevel: 'M',
+        scale: 6,
+        margin: 2,
+        color: {
+          dark: '#000000',
+          light: '#ffffff'
+        }
+      }, function (error) {
+        if (error) {
+          console.error(error);
+          alert("QR generation failed.");
+        } else {
+          canvas.style.display = "block";
+        }
+      });
+    }
+  </script>
+</body>
+</html>
