@@ -37,11 +37,37 @@
       margin-bottom: 0.5rem;
     }
 
-    p.description {
+    .description {
       font-size: 1rem;
       color: #64748b;
       margin-top: -0.5rem;
       margin-bottom: 2rem;
+      line-height: 1.6;
+      font-weight: 400;
+    }
+
+    .highlight {
+      color: #2563eb;
+      font-weight: 600;
+      text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+    }
+
+    .feature {
+      color: #34D399;
+      font-weight: 500;
+      font-style: italic;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      .description {
+        color: #94a3b8;
+      }
+      .highlight {
+        color: #60a5fa;
+      }
+      .feature {
+        color: #6ee7b7;
+      }
     }
 
     textarea, input {
@@ -111,10 +137,9 @@
     }
 
     canvas {
-      margin-top: 1rem; /* Removed display: none to avoid overriding specific canvases */
+      margin-top: 1rem;
     }
 
-    /* Popup Style */
     .popup {
       display: none;
       position: fixed;
@@ -166,15 +191,14 @@
       background-color: #059669;
     }
 
-    /* QR Code Styling */
     #donateCanvas {
-      width: 150px; /* Fixed width */
-      height: 150px; /* Fixed height to maintain square aspect ratio */
+      width: 150px;
+      height: 150px;
     }
 
     @media (max-width: 600px) {
       #donatePopup .popup-content > div {
-        flex-direction: column; /* Stack vertically on small screens */
+        flex-direction: column;
         align-items: flex-start;
       }
       #donateQR {
@@ -182,7 +206,7 @@
         margin-top: 1rem;
       }
       #donateCanvas {
-        width: 120px; /* Slightly smaller on mobile */
+        width: 120px;
         height: 120px;
       }
     }
@@ -191,14 +215,11 @@
 <body>
   <h1>🔐 Bitcoin Seed Vault (NFC Optimized)</h1>
   <p class="description">
-    Securely encrypt your Bitcoin seed phrase using AES-256 encryption and store it in a compact format optimized for NFC tags.  
-    <br>
-    Designed for cold storage, air-gapped workflows, and mobile NFC devices. Fast, private, and fully offline — your keys never leave this page.
+    Protect your Bitcoin seed phrase with <span class="highlight">military-grade AES-256 encryption</span>,transformed into a compact format tailored for NFC tags.Built for ultimate security,this tool supports <span class="feature">cold storage</span>, <span class="feature">air-gapped systems</span>,and <span class="feature">mobile NFC devices</span>.Enjoy a fast, private, and completely offline experience your keys stay safe,never leaving this page.
     <br><br>
     <button onclick="showPopup()">🔒 How to Securely Store Your Bitcoin Seed: A Step-by-Step Guide</button>
   </p>
 
-  <!-- Popup content -->
   <div id="popup" class="popup">
     <div class="popup-content">
       <h2>🔐 How to Securely Store Your Bitcoin Seed: A Step-by-Step Guide</h2>
@@ -286,28 +307,25 @@
     <div class="output" id="decryptedOutput"></div>
   </div>
 
-  <!-- Donate Button -->
   <button class="donate-btn" onclick="showDonatePopup()">
     💰 Donate Bitcoin
   </button>
 
-<!-- Donate Popup content -->
-<div id="donatePopup" class="popup">
-  <div class="popup-content">
-    <h2>🔑 Donate to Support the Project</h2>
-    <div style="display: flex; align-items: center; justify-content: space-between; margin-top: 1rem;">
-      <div>
-        <p><strong>Bitcoin Address:</strong><br><strong>15byveea1YXs5tK3wCZpzaM25Vw6bywRmb</strong></p>
-        <p><strong>Goal:</strong><br>Help me raise $5 million USD to obtain the EB-5 visa, known as the USA Gold Visa Card, and make my dream of living in the United States a reality. This investment unlocks a future filled with opportunity and innovation in a land that inspires bold ambitions. Join me in this exciting journey!</p>
+  <div id="donatePopup" class="popup">
+    <div class="popup-content">
+      <h2>🔑 Donate to Support the Project</h2>
+      <div style="display: flex; align-items: center; justify-content: space-between; margin-top: 1rem;">
+        <div>
+          <p><strong>Bitcoin Address:</strong><br><strong>15byveea1YXs5tK3wCZpzaM25Vw6bywRmb</strong></p>
+          <p><strong>Goal:</strong><br>Help me raise $5 million USD to obtain the EB-5 visa, known as the USA Gold Visa Card, and make my dream of living in the United States a reality. This investment unlocks a future filled with opportunity and innovation in a land that inspires bold ambitions. Join me in this exciting journey!</p>
+        </div>
+        <div id="donateQR" style="margin-left: 1rem;"><canvas id="donateCanvas"></canvas></div>
       </div>
-      <div id="donateQR" style="margin-left: 1rem;"><canvas id="donateCanvas"></canvas></div>
+      <button class="popup-close" onclick="closeDonatePopup()">Close</button>
     </div>
-    <button class="popup-close" onclick="closeDonatePopup()">Close</button>
   </div>
-</div>
 
   <script>
-    // Function to show the donate popup with the QR code
     function showDonatePopup() {
       const popup = document.getElementById('donatePopup');
       popup.style.display = 'block';
@@ -315,23 +333,21 @@
       const qrCanvas = document.getElementById('donateCanvas');
       QRCode.toCanvas(qrCanvas, bitcoinAddress, { 
         errorCorrectionLevel: 'M', 
-        scale: 4, // Reduced scale for better fit within 150x150px
-        width: 150 // Explicitly set width to match CSS
+        scale: 4,
+        width: 150
       }, function (error) {
         if (error) {
           console.error('QR Code generation failed:', error);
         } else {
-          qrCanvas.style.display = 'block'; // Ensure the canvas is visible
+          qrCanvas.style.display = 'block';
         }
       });
     }
 
-    // Close donate popup
     function closeDonatePopup() {
       document.getElementById('donatePopup').style.display = 'none';
     }
 
-    // JavaScript functions for encryption, decryption, and popup handling
     async function getPasswordKey(password) {
       const hash = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(password));
       return crypto.subtle.importKey("raw", hash, "PBKDF2", false, ["deriveKey"]);
@@ -431,17 +447,14 @@
       });
     }
 
-    // Show the How to guide popup
     function showPopup() {
       document.getElementById('popup').style.display = 'block';
     }
 
-    // Close the How to guide popup
     function closePopup() {
       document.getElementById('popup').style.display = 'none';
     }
 
-    // Placeholder for pasteEncrypted (if you want to implement it)
     function pasteEncrypted() {
       navigator.clipboard.readText().then(text => {
         document.getElementById('encryptedJson').value = text;
