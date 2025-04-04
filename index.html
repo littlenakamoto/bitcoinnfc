@@ -114,6 +114,44 @@
       margin-top: 1rem;
       display: none;
     }
+
+    /* Popup Style */
+    .popup {
+      display: none;
+      position: fixed;
+      z-index: 100;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.7);
+      padding: 20px;
+      overflow-y: auto;
+    }
+
+    .popup-content {
+      background-color: white;
+      margin: 5% auto;
+      padding: 20px;
+      width: 80%;
+      max-width: 800px;
+      border-radius: 8px;
+      color: #333;
+    }
+
+    .popup-close {
+      background-color: #f44336;
+      color: white;
+      padding: 10px 15px;
+      font-size: 16px;
+      cursor: pointer;
+      border-radius: 5px;
+      margin-top: 20px;
+    }
+
+    .popup-close:hover {
+      background-color: #e60000;
+    }
   </style>
 </head>
 <body>
@@ -122,7 +160,62 @@
     Securely encrypt your Bitcoin seed phrase using AES-256 encryption and store it in a compact format optimized for NFC tags.  
     <br>
     Designed for cold storage, air-gapped workflows, and mobile NFC devices. Fast, private, and fully offline — your keys never leave this page.
+    <br><br>
+    <button onclick="showPopup()">🔒 How to Securely Store Your Bitcoin Seed: A Step-by-Step Guide</button>
   </p>
+
+  <!-- Popup content -->
+  <div id="popup" class="popup">
+    <div class="popup-content">
+      <h2>🔐 How to Securely Store Your Bitcoin Seed: A Step-by-Step Guide</h2>
+      <p><strong>Goal:</strong> Securely encrypt and store your Bitcoin seed phrase for maximum protection, using an offline, air-gapped environment. This method ensures that no sensitive information ever leaves your local environment.</p>
+
+      <h3>🧑‍💻 1. Prepare a Secure, Offline Environment</h3>
+      <p>For maximum security, never perform any seed encryption or decryption on an online or connected device. Use a fresh, offline system to minimize the risk of malware or network-based attacks.</p>
+      <ul>
+        <li><strong>Use a USB Live OS:</strong> Download a live operating system (OS) like Tails or Ubuntu Live onto a USB stick.</li>
+        <li><strong>Tails OS:</strong> A privacy-focused, live OS that doesn’t leave traces. Perfect for one-time operations like seed encryption.</li>
+        <li><strong>Ubuntu Live:</strong> A stable Linux distribution that runs directly from a USB, leaving no data behind on your computer.</li>
+        <li><strong>Boot From USB:</strong> Insert the USB into the computer, reboot, and boot from the USB. Ensure no hard drive is used during this process (i.e., the system is entirely isolated from any internal storage).</li>
+        <li><strong>Disable Networking:</strong> Disconnect from the internet entirely, either by disabling Wi-Fi or by using an Ethernet cable that’s physically unplugged. Do not connect to the internet during this process.</li>
+        <li><strong>Ensure a Fresh OS:</strong> Use live versions of operating systems (such as Ubuntu or Tails) to ensure that no persistent data is left on your device.</li>
+      </ul>
+
+      <h3>🔐 2. Encrypting Your Bitcoin Seed</h3>
+      <p>Once your offline, air-gapped environment is set up, it’s time to securely encrypt your Bitcoin seed phrase.</p>
+      <ul>
+        <li><strong>Open the Bitcoin Seed Vault:</strong> Load the Bitcoin Seed Vault webpage you created earlier (from your USB or from your offline computer).</li>
+        <li><strong>Enter Your Seed Phrase:</strong> Type your Bitcoin seed phrase into the "Seed Phrase" input field.</li>
+        <li><strong>Choose a Strong Password:</strong> Pick a strong password for encryption. Never use easily guessable passwords.</li>
+        <li><strong>Click “Encrypt”:</strong> Once you have entered your seed phrase and password, click the "Encrypt" button. The system will generate an encrypted version of your seed.</li>
+        <li><strong>Generate QR Code (Optional):</strong> After encryption, you can choose to generate a QR code containing the encrypted seed.</li>
+      </ul>
+
+      <h3>📦 3. Store the Encrypted Seed Safely</h3>
+      <ul>
+        <li><strong>Offline Storage:</strong> Print the QR Code or write the encrypted seed down on paper.</li>
+        <li><strong>Avoid Cloud Storage:</strong> Do not upload your encrypted seed to any online storage platforms.</li>
+      </ul>
+
+      <h3>🔑 4. Decrypting the Seed When Needed</h3>
+      <ul>
+        <li><strong>Ensure the Device is Offline:</strong> Disconnect from the internet when performing decryption.</li>
+        <li><strong>Load the Bitcoin Seed Vault:</strong> Open the same page you used for encryption.</li>
+        <li><strong>Enter the Encrypted Seed:</strong> Paste or type the encrypted seed string into the input field.</li>
+        <li><strong>Enter the Password:</strong> Provide the password you used for encryption.</li>
+        <li><strong>Click “Decrypt”:</strong> The system will decrypt the seed phrase, and the original Bitcoin seed will be displayed.</li>
+      </ul>
+
+      <h3>🛡️ 5. Additional Security Tips</h3>
+      <ul>
+        <li><strong>Cold Wallet:</strong> Consider storing your encrypted seed on a hardware wallet for additional protection.</li>
+        <li><strong>Backup Your Encrypted Seed:</strong> Keep multiple encrypted backups of your seed in secure locations.</li>
+        <li><strong>Do Not Share Your Seed:</strong> Always ensure it is encrypted before sharing it for backup purposes.</li>
+      </ul>
+
+      <button class="popup-close" onclick="closePopup()">Close</button>
+    </div>
+  </div>
 
   <div class="section">
     <h2>Encrypt Seed</h2>
@@ -161,6 +254,8 @@
   </div>
 
   <script>
+    // JavaScript functions for encryption, decryption, and popup handling
+
     async function getPasswordKey(password) {
       const hash = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(password));
       return crypto.subtle.importKey("raw", hash, "PBKDF2", false, ["deriveKey"]);
@@ -301,6 +396,15 @@
           canvas.style.display = "block";
         }
       });
+    }
+
+    // Popup functions
+    function showPopup() {
+      document.getElementById('popup').style.display = 'block';
+    }
+
+    function closePopup() {
+      document.getElementById('popup').style.display = 'none';
     }
   </script>
 </body>
