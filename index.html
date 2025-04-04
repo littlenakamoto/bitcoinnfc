@@ -111,8 +111,7 @@
     }
 
     canvas {
-      margin-top: 1rem;
-      display: none;
+      margin-top: 1rem; /* Removed display: none to avoid overriding specific canvases */
     }
 
     /* Popup Style */
@@ -152,6 +151,41 @@
     .popup-close:hover {
       background-color: #e60000;
     }
+
+    .donate-btn {
+      margin-top: 2rem;
+      background-color: #34D399;
+      color: white;
+      padding: 0.6rem 1rem;
+      font-size: 1rem;
+      border-radius: 0.5rem;
+      cursor: pointer;
+    }
+
+    .donate-btn:hover {
+      background-color: #059669;
+    }
+
+    /* QR Code Styling */
+    #donateCanvas {
+      width: 150px; /* Fixed width */
+      height: 150px; /* Fixed height to maintain square aspect ratio */
+    }
+
+    @media (max-width: 600px) {
+      #donatePopup .popup-content > div {
+        flex-direction: column; /* Stack vertically on small screens */
+        align-items: flex-start;
+      }
+      #donateQR {
+        margin-left: 0;
+        margin-top: 1rem;
+      }
+      #donateCanvas {
+        width: 120px; /* Slightly smaller on mobile */
+        height: 120px;
+      }
+    }
   </style>
 </head>
 <body>
@@ -169,7 +203,6 @@
     <div class="popup-content">
       <h2>🔐 How to Securely Store Your Bitcoin Seed: A Step-by-Step Guide</h2>
       <p><strong>Goal:</strong> Securely encrypt and store your Bitcoin seed phrase for maximum protection, using an offline, air-gapped environment. This method ensures that no sensitive information ever leaves your local environment.</p>
-
       <h3>🧑‍💻 1. Prepare a Secure, Offline Environment</h3>
       <p>For maximum security, never perform any seed encryption or decryption on an online or connected device. Use a fresh, offline system to minimize the risk of malware or network-based attacks.</p>
       <ul>
@@ -253,9 +286,52 @@
     <div class="output" id="decryptedOutput"></div>
   </div>
 
-  <script>
-    // JavaScript functions for encryption, decryption, and popup handling
+  <!-- Donate Button -->
+  <button class="donate-btn" onclick="showDonatePopup()">
+    💰 Donate Bitcoin
+  </button>
 
+<!-- Donate Popup content -->
+<div id="donatePopup" class="popup">
+  <div class="popup-content">
+    <h2>🔑 Donate to Support the Project</h2>
+    <div style="display: flex; align-items: center; justify-content: space-between; margin-top: 1rem;">
+      <div>
+        <p><strong>Bitcoin Address:</strong><br><strong>15byveea1YXs5tK3wCZpzaM25Vw6bywRmb</strong></p>
+        <p><strong>Goal:</strong><br>Help me raise $5 million USD to obtain the EB-5 visa, known as the USA Gold Visa Card, and make my dream of living in the United States a reality. This investment unlocks a future filled with opportunity and innovation in a land that inspires bold ambitions. Join me in this exciting journey!</p>
+      </div>
+      <div id="donateQR" style="margin-left: 1rem;"><canvas id="donateCanvas"></canvas></div>
+    </div>
+    <button class="popup-close" onclick="closeDonatePopup()">Close</button>
+  </div>
+</div>
+
+  <script>
+    // Function to show the donate popup with the QR code
+    function showDonatePopup() {
+      const popup = document.getElementById('donatePopup');
+      popup.style.display = 'block';
+      const bitcoinAddress = '15byveea1YXs5tK3wCZpzaM25Vw6bywRmb';
+      const qrCanvas = document.getElementById('donateCanvas');
+      QRCode.toCanvas(qrCanvas, bitcoinAddress, { 
+        errorCorrectionLevel: 'M', 
+        scale: 4, // Reduced scale for better fit within 150x150px
+        width: 150 // Explicitly set width to match CSS
+      }, function (error) {
+        if (error) {
+          console.error('QR Code generation failed:', error);
+        } else {
+          qrCanvas.style.display = 'block'; // Ensure the canvas is visible
+        }
+      });
+    }
+
+    // Close donate popup
+    function closeDonatePopup() {
+      document.getElementById('donatePopup').style.display = 'none';
+    }
+
+    // JavaScript functions for encryption, decryption, and popup handling
     async function getPasswordKey(password) {
       const hash = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(password));
       return crypto.subtle.importKey("raw", hash, "PBKDF2", false, ["deriveKey"]);
@@ -342,69 +418,36 @@
     }
 
     function copyEncrypted() {
-      const text = document.getElementById('encryptedOutput').textContent;
-      if (navigator.clipboard && window.isSecureContext) {
-        navigator.clipboard.writeText(text).then(() => alert("Copied to clipboard!"))
-          .catch(err => alert("Clipboard error: " + err.message));
-      } else {
-        const textarea = document.createElement('textarea');
-        textarea.value = text;
-        document.body.appendChild(textarea);
-        textarea.select();
-        try {
-          document.execCommand('copy');
-          alert('Copied to clipboard!');
-        } catch (err) {
-          alert('Copy failed: ' + err);
-        }
-        document.body.removeChild(textarea);
-      }
-    }
-
-    function pasteEncrypted() {
-      if (navigator.clipboard && window.isSecureContext) {
-        navigator.clipboard.readText()
-          .then(text => {
-            document.getElementById('encryptedJson').value = text;
-          })
-          .catch(err => alert("Paste failed: " + err.message));
-      } else {
-        alert("Paste not supported. Use Ctrl+V manually.");
-      }
+      const encrypted = document.getElementById('encryptedOutput').textContent;
+      navigator.clipboard.writeText(encrypted);
+      alert('Encrypted seed copied to clipboard!');
     }
 
     function generateQRCode() {
-      const encrypted = document.getElementById('encryptedOutput').textContent;
-      const canvas = document.getElementById('qrCanvas');
-      if (!encrypted) {
-        alert("Nothing to generate. Please encrypt a seed first.");
-        return;
-      }
-      QRCode.toCanvas(canvas, encrypted, {
-        errorCorrectionLevel: 'M',
-        scale: 6,
-        margin: 2,
-        color: {
-          dark: '#000000',
-          light: '#ffffff'
-        }
-      }, function (error) {
-        if (error) {
-          console.error(error);
-          alert("QR generation failed.");
-        } else {
-          canvas.style.display = "block";
-        }
+      const encryptedSeed = document.getElementById('encryptedOutput').textContent;
+      QRCode.toCanvas(document.getElementById('qrCanvas'), encryptedSeed, { errorCorrectionLevel: 'M', scale: 4 }, function (error) {
+        if (error) console.error(error);
+        else document.getElementById('qrCanvas').style.display = 'block';
       });
     }
 
-    // Popup functions
+    // Show the How to guide popup
     function showPopup() {
       document.getElementById('popup').style.display = 'block';
     }
 
+    // Close the How to guide popup
     function closePopup() {
       document.getElementById('popup').style.display = 'none';
+    }
+
+    // Placeholder for pasteEncrypted (if you want to implement it)
+    function pasteEncrypted() {
+      navigator.clipboard.readText().then(text => {
+        document.getElementById('encryptedJson').value = text;
+      }).catch(err => {
+        alert('Failed to paste from clipboard: ' + err);
+      });
     }
   </script>
 </body>
