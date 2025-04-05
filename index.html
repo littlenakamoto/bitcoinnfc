@@ -138,6 +138,7 @@
 
     canvas {
       margin-top: 1rem;
+      display: none; /* Initially hidden until generated */
     }
 
     .popup {
@@ -288,6 +289,7 @@
       </div>
       <div style="margin-top: 1rem;">
         <button onclick="generateQRCode()">📸 Show QR</button>
+        <button onclick="printQRCode()">🖨️ Print QR</button>
         <canvas id="qrCanvas"></canvas>
       </div>
     </div>
@@ -441,9 +443,58 @@
 
     function generateQRCode() {
       const encryptedSeed = document.getElementById('encryptedOutput').textContent;
-      QRCode.toCanvas(document.getElementById('qrCanvas'), encryptedSeed, { errorCorrectionLevel: 'M', scale: 4 }, function (error) {
+      if (!encryptedSeed) {
+        alert('Please encrypt a seed first!');
+        return;
+      }
+      const qrCanvas = document.getElementById('qrCanvas');
+      QRCode.toCanvas(qrCanvas, encryptedSeed, { errorCorrectionLevel: 'M', scale: 4 }, function (error) {
         if (error) console.error(error);
-        else document.getElementById('qrCanvas').style.display = 'block';
+        else qrCanvas.style.display = 'block';
+      });
+    }
+
+    function printQRCode() {
+      const encryptedSeed = document.getElementById('encryptedOutput').textContent;
+      if (!encryptedSeed) {
+        alert('Please encrypt a seed first!');
+        return;
+      }
+
+      // Create a temporary canvas for printing
+      const tempCanvas = document.createElement('canvas');
+      QRCode.toCanvas(tempCanvas, encryptedSeed, { errorCorrectionLevel: 'M', scale: 4 }, function (error) {
+        if (error) {
+          console.error(error);
+          alert('Failed to generate QR code for printing');
+          return;
+        }
+
+        const printWindow = window.open('', '_blank');
+        printWindow.document.write(`
+          <html>
+            <head>
+              <title>Print QR Code</title>
+              <style>
+                body { 
+                  margin: 0; 
+                  display: flex; 
+                  justify-content: center; 
+                  align-items: center; 
+                  height: 100vh; 
+                }
+                img { 
+                  max-width: 100%; 
+                  max-height: 100%; 
+                }
+              </style>
+            </head>
+            <body onload="window.print(); window.close();">
+              <img src="${tempCanvas.toDataURL('image/png')}" alt="QR Code">
+            </body>
+          </html>
+        `);
+        printWindow.document.close();
       });
     }
 
