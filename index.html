@@ -197,6 +197,36 @@
       height: 150px;
     }
 
+    .suggestions {
+      position: absolute;
+      background: #fff;
+      border: 1px solid #cbd5e1;
+      border-radius: 0.5rem;
+      max-height: 150px;
+      overflow-y: auto;
+      z-index: 10;
+      width: 200px;
+    }
+
+    .suggestion-item {
+      padding: 0.5rem;
+      cursor: pointer;
+    }
+
+    .suggestion-item:hover {
+      background: #e2e8f0;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      .suggestions {
+        background: #1e293b;
+        border: 1px solid #334155;
+      }
+      .suggestion-item:hover {
+        background: #334155;
+      }
+    }
+
     @media (max-width: 600px) {
       #donatePopup .popup-content > div {
         flex-direction: column;
@@ -211,12 +241,29 @@
         height: 120px;
       }
     }
+
+    /* Adjusted style for seed phrase container */
+    .seed-phrase-container {
+      position: relative;
+      display: block; /* Changed from flex to block to stack label above textarea */
+    }
+
+    .seed-phrase-container label {
+      display: block;
+      margin-bottom: 0.5rem;
+    }
+
+    .seed-phrase-container .suggestions {
+      top: 2.5rem; /* Adjust to position below the label */
+      right: 0; /* Align to the right of the textarea */
+      width: 200px;
+    }
   </style>
 </head>
 <body>
   <h1>🔐 Bitcoin Seed Vault (NFC Optimized)</h1>
   <p class="description">
-    Protect your Bitcoin seed phrase with <span class="highlight">military-grade AES-256 encryption</span>,transformed into a compact format tailored for NFC tags.Built for ultimate security,this tool supports <span class="feature">cold storage</span>, <span class="feature">air-gapped systems</span>,and <span class="feature">mobile NFC devices</span>.Enjoy a fast, private, and completely offline experience your keys stay safe,never leaving this page.
+    Protect your Bitcoin seed phrase with <span class="highlight">military-grade AES-256 encryption</span>, transformed into a compact format tailored for NFC tags. Built for ultimate security, this tool supports <span class="feature">cold storage</span>, <span class="feature">air-gapped systems</span>, and <span class="feature">mobile NFC devices</span>. Enjoy a fast, private, and completely offline experience your keys stay safe, never leaving this page.
     <br><br>
     <button onclick="showPopup()">🔒 How to Securely Store Your Bitcoin Seed: A Step-by-Step Guide</button>
   </p>
@@ -274,8 +321,13 @@
 
   <div class="section">
     <h2>Encrypt Seed</h2>
-    <label>Seed Phrase:</label>
-    <textarea id="seed" rows="3" placeholder="e.g. blast syrup submit fix impose update same film move deposit gap scissors hungry radio frog error ginger light butter misery maple capital language media ..."></textarea>
+    <div class="seed-phrase-container">
+      <label for="seed">Seed Phrase:</label>
+      <div style="position: relative;">
+        <textarea id="seed" rows="3" placeholder="e.g. blast syrup submit fix impose update same film move deposit gap scissors ..." oninput="showSuggestions(event)"></textarea>
+        <div id="suggestions" class="suggestions" style="display: none;"></div>
+      </div>
+    </div>
 
     <label>Password:</label>
     <input type="password" id="encryptPassword" placeholder="Strong password" />
@@ -328,6 +380,79 @@
   </div>
 
   <script>
+    // Fallback BIP-39 wordlist (small subset) in case file loading fails
+    const fallbackBip39Words = [
+      "abandon", "ability", "able", "about", "above", "absent", "absorb", "abstract", "absurd", "abuse"
+    ];
+
+    // Load BIP-39 wordlist from bip39-english.txt
+    let bip39Words = fallbackBip39Words; // Default to fallback
+    async function loadWordlist() {
+      try {
+        const response = await fetch('bip39-english.txt');
+        if (!response.ok) throw new Error('Failed to fetch wordlist');
+        const text = await response.text();
+        bip39Words = text.split('\n').map(word => word.trim()).filter(word => word);
+        console.log('BIP-39 wordlist loaded successfully:', bip39Words.length, 'words');
+      } catch (error) {
+        console.error('Error loading BIP-39 wordlist:', error);
+        alert('Failed to load BIP-39 wordlist. Using fallback list (limited functionality).');
+        bip39Words = fallbackBip39Words;
+      }
+    }
+
+    // Load the wordlist on page load
+    loadWordlist();
+
+    // Autocomplete functionality for Encrypt Seed section only
+    function showSuggestions(event) {
+      const textarea = event.target;
+      if (textarea.id !== 'seed') return; // Only trigger for the "seed" textarea
+
+      const cursorPos = textarea.selectionStart;
+      const text = textarea.value;
+      const words = text.slice(0, cursorPos).split(/\s+/);
+      const currentWord = words[words.length - 1].toLowerCase();
+
+      const suggestionsDiv = document.getElementById('suggestions');
+      suggestionsDiv.innerHTML = '';
+      suggestionsDiv.style.display = 'none';
+
+      if (currentWord.length < 1) return;
+
+      const matches = bip39Words.filter(word => word.startsWith(currentWord)).slice(0, 5);
+      if (matches.length === 0) return;
+
+      matches.forEach(match => {
+        const div = document.createElement('div');
+        div.className = 'suggestion-item';
+        div.textContent = match;
+        div.onclick = () => insertSuggestion(textarea, match, words, cursorPos);
+        suggestionsDiv.appendChild(div);
+      });
+
+      suggestionsDiv.style.display = 'block';
+    }
+
+    function insertSuggestion(textarea, suggestion, words, cursorPos) {
+      const text = textarea.value;
+      const wordStart = cursorPos - words[words.length - 1].length;
+      const newText = text.slice(0, wordStart) + suggestion + text.slice(cursorPos);
+      textarea.value = newText;
+      textarea.focus();
+      const newCursorPos = wordStart + suggestion.length;
+      textarea.setSelectionRange(newCursorPos, newCursorPos);
+      document.getElementById('suggestions').style.display = 'none';
+    }
+
+    // Close suggestions when clicking outside
+    document.addEventListener('click', (e) => {
+      const suggestionsDiv = document.getElementById('suggestions');
+      if (!suggestionsDiv.contains(e.target) && e.target.id !== 'seed') {
+        suggestionsDiv.style.display = 'none';
+      }
+    });
+
     function showDonatePopup() {
       const popup = document.getElementById('donatePopup');
       popup.style.display = 'block';
@@ -461,7 +586,6 @@
         return;
       }
 
-      // Create a temporary canvas for printing
       const tempCanvas = document.createElement('canvas');
       QRCode.toCanvas(tempCanvas, encryptedSeed, { errorCorrectionLevel: 'M', scale: 4 }, function (error) {
         if (error) {
